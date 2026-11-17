@@ -5,6 +5,10 @@ A web application for solving systems of linear equations and single nonlinear e
 **Davao Oriental State University**
 Faculty of Computing, Engineering and Technology, Department of Civil Engineering
 
+[![Streamlit](https://img.shields.io/badge/Framework-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://mlgaussjordan.streamlit.app)
+[![Python](https://img.shields.io/badge/Language-Python%203.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-Academic%20Use-blue?style=for-the-badge)](#)
+
 **Live application:** [mlgaussjordan.streamlit.app](https://mlgaussjordan.streamlit.app)
 
 ---
