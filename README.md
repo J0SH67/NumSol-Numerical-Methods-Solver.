@@ -1,5 +1,5 @@
-# 🏗️ System of Linear Equations Solver
-### *Numerical Linear Algebra via Custom Gauss-Jordan Elimination with Scale-Aware Pivoting*
+# 🏗️ Numerical Methods Solver
+### *Linear Systems via Gauss-Jordan Elimination + Nonlinear Root Finding (Bisection, False Position, Newton-Raphson, Secant, Bairstow)*
 
 **Davao Oriental State University**  
 Faculty of Computing, Engineering and Technology — Department of Civil Engineering  
@@ -31,7 +31,8 @@ In engineering analysis and numerical computation, solving systems of linear equ
 
 ### Core Architecture & Components
 1. **Custom Gauss-Jordan Elimination Engine (`gauss_jordan.py`):** Solves general square systems using scale-aware relative tolerance singularity detection, partial pivoting for numerical stability, and full audit logging of row transformations.
-2. **Interactive Streamlit Web Dashboard (`app.py`):** Provides a visual, interactive interface allowing users to dynamically adjust matrix dimensions ($2 \times 2$ up to $8 \times 8$), manually input or modify matrix coefficients, compute exact solutions, and trace every intermediate row operation step-by-step.
+2. **Root-Finding Engine (`root_finding.py`):** Solves single linear or nonlinear equations $f(x) = 0$ using two bracketing methods (Bisection, False Position), two open methods (Newton-Raphson, Secant) and Bairstow's method for all real and complex roots of a polynomial, with a safe expression parser and a full iteration log.
+3. **Interactive Streamlit Web Dashboard (`app.py`):** Provides a visual, interactive interface allowing users to dynamically adjust matrix dimensions ($2 \times 2$ up to $8 \times 8$), manually input or modify matrix coefficients, compute exact solutions, and trace every intermediate row operation step-by-step.
 
 ---
 
@@ -80,6 +81,64 @@ If the pivot value $\lvert M_{k,k} \rvert < \text{threshold}$, the system is fla
 Upon completing elimination across all $n$ columns, the solution vector is directly read from the final column:
 
 $$x_i = M_{i, n+1} \quad \text{for } i = 1, 2, \dots, n$$
+
+---
+
+## 📉 Nonlinear Equations: Root-Finding Methods
+
+To solve $f(x) = 0$, `root_finding.py` provides four methods. Functions are typed as text (e.g. `x^3 - 2*x - 5` or `cos(x) = x`) and read by a safe parser (no `eval`).
+
+### Bracketing Methods (need an interval $[a, b]$ with $f(a)\,f(b) < 0$)
+
+| Method | Update formula | Notes |
+| :--- | :--- | :--- |
+| **Bisection** | $c = \dfrac{a + b}{2}$ | Always converges; error halves each step. |
+| **False Position (Regula Falsi)** | $c = b - \dfrac{f(b)(a - b)}{f(a) - f(b)}$ | Often faster than bisection; one endpoint can get "stuck". |
+
+### Open Methods (need starting guesses, no sign change required)
+
+| Method | Update formula | Notes |
+| :--- | :--- | :--- |
+| **Newton-Raphson** | $x_{n+1} = x_n - \dfrac{f(x_n)}{f'(x_n)}$ | Quadratic convergence; fails if $f'(x_n) \approx 0$. $f'(x)$ may be typed in or approximated by central difference. |
+| **Secant** | $x_{n+1} = x_n - \dfrac{f(x_n)(x_{n-1} - x_n)}{f(x_{n-1}) - f(x_n)}$ | No derivative needed; needs two starting guesses. |
+
+
+### Bairstow's Method (polynomials: all real and complex roots)
+
+Finds a quadratic factor $x^2 + ux + v$ of $f(x) = a_0x^n + a_1x^{n-1} + \dots + a_n$ (with $a_0 = 1$, $a_n \neq 0$), starting from guesses $u^0, v^0$. Its two roots come from the quadratic formula, and the remaining degree $n-2$ polynomial is factored the same way until every root is found.
+
+1. **Synthetic division:** $b_0 = a_0,\; b_1 = a_1 - u b_0,\; b_k = a_k - u b_{k-1} - v b_{k-2}$; the remainder is $(x+u)b_{n-1} + b_n$.
+2. **Partial derivatives:** the same recursion on the b's gives $c_0 = b_0,\; c_1 = b_1 - u c_0,\; c_k = b_k - u c_{k-1} - v c_{k-2}$, where $\partial b_k/\partial u = -c_{k-1}$ and $\partial b_k/\partial v = -c_{k-2}$.
+3. **Taylor series + Cramer's rule:** solve $b_n = c_{n-1}\Delta u + c_{n-2}\Delta v$ and $b_{n-1} = c_{n-2}\Delta u + c_{n-3}\Delta v$ for $\Delta u, \Delta v$.
+4. **Update and repeat** with $u \leftarrow u + \Delta u$, $v \leftarrow v + \Delta v$ until $|b_n| + |b_{n-1}| < \varepsilon$ or $|\Delta u| + |\Delta v| < \varepsilon$.
+5. **Safeguards:** *divergence* if $|\Delta u_{50}| + |\Delta v_{50}| > |\Delta u_1| + |\Delta v_1|$; *slow convergence* after 100 iterations; stop after 200.
+
+The app shows every iteration as a Bairstow table (a's, b's, c's), with the determinants for $\Delta u$ and $\Delta v$ filled in. Type the polynomial as text, e.g. `x^5 - 3*x^4 - 10*x^3 + 10*x^2 + 44*x + 48`; the default guesses $u^0 = v^0 = 1.8$ reproduce the sample problem (factor $x^2 + 2x + 2$, roots $-1 \pm i$).
+
+### Graphs
+
+Every method draws the graph of $f(x)$ as soon as the function is typed. After solving, the iterations (white dots), the root (red diamond) and, for the bracketing methods, the starting interval (shaded band) are added. For Bairstow's method the real roots are marked on the x-axis; complex roots are listed in the results table.
+
+### Typing your function (exponential, trigonometric, logarithmic and more)
+
+Type $f(x)$ like on a calculator, using `x` as the variable. You can type an expression (solved as $f(x) = 0$) or a full equation such as `cos(x) = x`. The app shows a **Reads as** line so you can check how it understood your input, and the **📘 Tutorial** in the Nonlinear Equations tab has a cheat-sheet, common mistakes, and one-click examples.
+
+| What you mean | What to type |
+| :--- | :--- |
+| 3x² + 2 | `3x^2 + 2` or `3*x^2 + 2` |
+| eˣ, e⁻ˣ, e²ˣ | `e^x` (or `exp(x)`), `e^(-x)`, `e^(2x)` |
+| 2ˣ | `2^x` |
+| 2 sin x, sin²x, cos 2x | `2sin(x)`, `sin(x)^2`, `cos(2x)` |
+| ln x, log₁₀ x, log₂ x | `ln(x)`, `log10(x)`, `log2(x)` |
+| √x, ³√x, \|x\|, π | `sqrt(x)`, `cbrt(x)`, `abs(x)`, `pi` |
+
+Available functions: `sin cos tan sec csc cot asin acos atan sinh cosh tanh exp ln log log10 log2 sqrt cbrt abs` (`log` is the natural log). Constants: `pi`, `e`. Always put a function's input in brackets (`sin(x)`, not `sin x`) and use brackets around multi-part exponents (`e^(2x)`, since `e^2x` means e² · x). Trigonometric functions use **radians** by default; switch **Angle mode** to *Degrees* when needed. Bairstow's method accepts polynomials only.
+
+Standalone test:
+
+```bash
+python root_finding.py
+```
 
 ---
 
@@ -135,6 +194,10 @@ python gauss_jordan.py
 ```text
 ├── app.py           # Interactive Streamlit dashboard for matrix editing & visual solver logs
 ├── gauss_jordan.py  # Standalone Gauss-Jordan elimination algorithm with scale-aware pivoting
+├── root_finding.py  # Bisection, False Position, Newton-Raphson, Secant, Bairstow + safe expression/polynomial parser
+├── plot_utils.py    # Builds the f(x) graph (Vega-Lite spec) used by every method
+├── .streamlit/
+│   └── config.toml  # Light theme (colors used by the app)
 ├── requirements.txt # Project dependencies (streamlit, numpy, pandas)
 └── README.md        # Technical project documentation
 ```
