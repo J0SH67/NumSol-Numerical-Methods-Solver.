@@ -1,203 +1,278 @@
-# 🏗️ Numerical Methods Solver
-### *Linear Systems via Gauss-Jordan Elimination + Nonlinear Root Finding (Bisection, False Position, Newton-Raphson, Secant, Bairstow)*
+# Numerical Methods Solver
 
-**Davao Oriental State University**  
-Faculty of Computing, Engineering and Technology — Department of Civil Engineering  
+A web application for solving systems of linear equations and single nonlinear equations, with every calculation step shown for verification.
 
-[![Streamlit](https://img.shields.io/badge/Framework-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://mlgaussjordan.streamlit.app)
-[![Python](https://img.shields.io/badge/Language-Python%203.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-Academic%20Use-blue?style=for-the-badge)](#)
+**Davao Oriental State University**
+Faculty of Computing, Engineering and Technology, Department of Civil Engineering
 
----
-
-## 🌐 Live Web Application
-You can try the platform directly in your browser without local installation:  
-👉 **[mlgaussjordan.streamlit.app](https://mlgaussjordan.streamlit.app)**
+**Live application:** [mlgaussjordan.streamlit.app](https://mlgaussjordan.streamlit.app)
 
 ---
 
-## 👨‍🏫 Course Instructor
-* **Engr. Samuel Erespe**
+## Project Team
 
-## 👥 Proponents & Contributors
-* **John Joshua D. Ilisan**
-* **Darius Lape**
-* **Briel Jan M. Lacia**
-
----
-
-## 📌 Executive Summary
-In engineering analysis and numerical computation, solving systems of linear equations ($Ax = b$) is a foundational requirement for structural analysis, network flow calculations, and frame modeling. This project provides a robust, transparent, first-principles implementation of **Gauss-Jordan Elimination** designed to solve general $n \times n$ systems of linear equations without relying on external linear algebra solvers or commercial libraries.
-
-### Core Architecture & Components
-1. **Custom Gauss-Jordan Elimination Engine (`gauss_jordan.py`):** Solves general square systems using scale-aware relative tolerance singularity detection, partial pivoting for numerical stability, and full audit logging of row transformations.
-2. **Root-Finding Engine (`root_finding.py`):** Solves single linear or nonlinear equations $f(x) = 0$ using two bracketing methods (Bisection, False Position), two open methods (Newton-Raphson, Secant) and Bairstow's method for all real and complex roots of a polynomial, with a safe expression parser and a full iteration log.
-3. **Interactive Streamlit Web Dashboard (`app.py`):** Provides a visual, interactive interface allowing users to dynamically adjust matrix dimensions ($2 \times 2$ up to $8 \times 8$), manually input or modify matrix coefficients, compute exact solutions, and trace every intermediate row operation step-by-step.
+| Role | Name |
+| :--- | :--- |
+| Course Instructor | Engr. Samuel Erespe |
+| Proponents | John Joshua D. Ilisan, Darius Lape, Briel Jan M. Lacia |
 
 ---
 
-## 📐 Mathematical Formulation
+## Table of Contents
 
-### 1. General System of Linear Equations
-A system of $n$ linear equations with $n$ unknown variables is expressed in matrix notation as:
+1. [Overview](#overview)
+2. [Features](#features)
+3. [Mathematical Background](#mathematical-background)
+4. [Using the Application](#using-the-application)
+5. [Installation](#installation)
+6. [Project Structure](#project-structure)
+7. [Verification](#verification)
+8. [Limitations](#limitations)
+9. [Roadmap](#roadmap)
+10. [License](#license)
+
+---
+
+## Overview
+
+Solving linear systems $Ax = b$ and nonlinear equations $f(x) = 0$ is a basic requirement in structural analysis, hydraulics, and general engineering computation. This project implements the underlying numerical methods from first principles, without calling an external linear algebra or root-finding library. The application records each intermediate matrix and iteration so that results can be checked against hand calculations.
+
+---
+
+## Features
+
+| Module | Methods | Output |
+| :--- | :--- | :--- |
+| Linear systems | Gauss-Jordan elimination with partial pivoting | Solution vector and every row operation |
+| Bracketing methods | Bisection, False Position (Regula Falsi) | Root, iteration table, graph with the starting interval |
+| Open methods | Newton-Raphson, Secant | Root, iteration table, graph with the iterates |
+| Polynomial roots | Bairstow's method | All real and complex roots, Bairstow tables for each iteration |
+
+Additional capabilities:
+
+- Functions are typed as text, including exponential, trigonometric, and logarithmic forms (for example `e^(-x) = x` or `2sin(x) - x`).
+- A graph of f(x) is drawn as soon as the function is entered and is updated with the root and iterations after solving.
+- Trigonometric functions can be evaluated in radians or degrees.
+- Input is read by a restricted expression parser. User text is never passed to `eval`.
+- Singular and ill-conditioned systems, intervals without a sign change, zero derivatives, and divergence are reported with explanatory messages.
+- A built-in tutorial explains how to type functions and provides ready-made examples.
+
+---
+
+## Mathematical Background
+
+### 1. Linear Systems: Gauss-Jordan Elimination
+
+A system of $n$ equations in $n$ unknowns is written as
 
 $$Ax = b$$
 
-$$\begin{bmatrix} a_{11} & a_{12} & \cdots & a_{1n} \\ a_{21} & a_{22} & \cdots & a_{2n} \\ \vdots & \vdots & \ddots & \vdots \\ a_{n1} & a_{n2} & \cdots & a_{nn} \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \\ \vdots \\ x_n \end{bmatrix} = \begin{bmatrix} b_1 \\ b_2 \\ \vdots \\ b_n \end{bmatrix}$$
+The augmented matrix $M = [A \mid b]$ of size $n \times (n+1)$ is reduced to reduced row echelon form $[I \mid x]$. For each column $k$:
 
-The goal is to determine the unknown vector $x = [x_1, x_2, \dots, x_n]^T$ by reducing the augmented matrix $[A \mid b]$ into reduced row echelon form (RREF) $[I \mid x]$, where $I$ is the $n \times n$ identity matrix.
+1. **Partial pivoting.** Select the row $r \ge k$ with the largest $\lvert M_{r,k} \rvert$ and swap it into row $k$.
+2. **Singularity check.** The system is rejected if
+   $$\lvert M_{k,k} \rvert < \max\left(\text{tol} \cdot \max \lvert M \rvert,\ 10^{-14}\right), \qquad \text{tol} = 10^{-10}$$
+   The threshold is relative to the size of the matrix entries, so large-valued systems are not rejected incorrectly.
+3. **Normalization.** Divide row $k$ by the pivot so that $M_{k,k} = 1$.
+4. **Elimination.** For every other row $i \ne k$:
+   $$M_{i,j} \leftarrow M_{i,j} - M_{i,k}\, M_{k,j}$$
+
+After the last column, the solution is read from the final column: $x_i = M_{i,n+1}$.
+
+### 2. Bracketing Methods
+
+These methods require an interval $[a, b]$ with $f(a)\,f(b) < 0$ and always keep a root inside the interval.
+
+| Method | Update | Remarks |
+| :--- | :--- | :--- |
+| Bisection | $c = \dfrac{a + b}{2}$ | The interval halves at each step; convergence is guaranteed. |
+| False Position | $c = b - \dfrac{f(b)\,(a - b)}{f(a) - f(b)}$ | The $x$-intercept of the chord through the endpoints. Often faster than bisection, but one endpoint may remain fixed. |
+
+### 3. Open Methods
+
+These methods need starting guesses but not a sign change. They are faster, but convergence is not guaranteed.
+
+| Method | Update | Remarks |
+| :--- | :--- | :--- |
+| Newton-Raphson | $x_{n+1} = x_n - \dfrac{f(x_n)}{f'(x_n)}$ | Quadratic convergence near a root. Fails if $f'(x_n) \approx 0$. The derivative may be typed or approximated by a central difference. |
+| Secant | $x_{n+1} = x_n - \dfrac{f(x_n)\,(x_{n-1} - x_n)}{f(x_{n-1}) - f(x_n)}$ | Replaces $f'(x_n)$ with a finite-difference slope; needs two starting values. |
+
+**Stopping criteria.** Bisection stops when the half-width of the interval is below the tolerance. The other methods stop when $\lvert x_{n+1} - x_n \rvert$ is below the tolerance. All methods also stop at the maximum number of iterations (default 100) and report if the tolerance was not reached.
+
+### 4. Bairstow's Method
+
+Bairstow's method finds the quadratic factors $x^2 + ux + v$ of a polynomial
+
+$$f(x) = a_0 x^n + a_1 x^{n-1} + \dots + a_n, \qquad a_0 = 1,\ a_n \neq 0$$
+
+so that all real and complex roots can be obtained from the quadratic formula. Starting from guesses $u^0, v^0$:
+
+1. **Synthetic division by the trial factor:**
+   $$b_0 = a_0,\quad b_1 = a_1 - u\,b_0,\quad b_k = a_k - u\,b_{k-1} - v\,b_{k-2}$$
+   The remainder is $(x + u)\,b_{n-1} + b_n$.
+2. **Partial derivatives** (a second synthetic division of the $b$ values):
+   $$c_0 = b_0,\quad c_1 = b_1 - u\,c_0,\quad c_k = b_k - u\,c_{k-1} - v\,c_{k-2}$$
+   with $\partial b_k / \partial u = -c_{k-1}$ and $\partial b_k / \partial v = -c_{k-2}$.
+3. **Corrections from a Taylor series expansion.** Setting the remainder terms to zero gives
+   $$b_n = c_{n-1}\,\Delta u + c_{n-2}\,\Delta v, \qquad b_{n-1} = c_{n-2}\,\Delta u + c_{n-3}\,\Delta v$$
+   solved by Cramer's rule:
+   $$\Delta u = \frac{b_n\,c_{n-3} - c_{n-2}\,b_{n-1}}{c_{n-1}\,c_{n-3} - c_{n-2}^{2}}, \qquad \Delta v = \frac{c_{n-1}\,b_{n-1} - c_{n-2}\,b_n}{c_{n-1}\,c_{n-3} - c_{n-2}^{2}}$$
+4. **Update** $u \leftarrow u + \Delta u$ and $v \leftarrow v + \Delta v$, and repeat until $\lvert b_n \rvert + \lvert b_{n-1} \rvert < \varepsilon$ or $\lvert \Delta u \rvert + \lvert \Delta v \rvert < \varepsilon$.
+5. **Deflation.** The roots of $x^2 + ux + v$ are found with the quadratic formula. The $b$ coefficients form a polynomial of degree $n - 2$, and the process is repeated until all roots are found.
+
+**Iteration safeguards.** Divergence is reported if $\lvert \Delta u_{50} \rvert + \lvert \Delta v_{50} \rvert > \lvert \Delta u_1 \rvert + \lvert \Delta v_1 \rvert$. Slow convergence is reported if the tolerance is not met after 100 iterations. Iteration stops after 200 iterations.
 
 ---
 
-### 2. Scale-Aware Gauss-Jordan Elimination with Partial Pivoting
-The solver in `gauss_jordan.py` implements the following systematic numerical steps:
+## Using the Application
 
-#### Step 1: Augmented Matrix Setup
-The coefficient matrix $A$ and constant vector $b$ are combined into an augmented matrix $M$ of dimension $n \times (n+1)$:
+### Typing a Function
 
-$$M = [A \mid b]$$
+Type $f(x)$ as on a calculator, using `x` as the variable. An expression is solved as $f(x) = 0$. A full equation such as `cos(x) = x` is also accepted and is solved as $\cos x - x = 0$. The line labeled "Reads as" under the input box shows how the entry was interpreted.
 
-#### Step 2: Partial Pivoting
-To maintain numerical stability and avoid division by zero (or small numbers that introduce roundoff errors), row swaps are performed at each column $k$:
-
-$$\text{Find } r \text{ such that } \lvert M_{r,k} \rvert = \max_{i \ge k} \lvert M_{i,k} \rvert$$
-
-If $r \neq k$, Row $k$ and Row $r$ are swapped.
-
-#### Step 3: Scale-Aware Singularity Detection
-Rather than relying on a rigid fixed tolerance, the solver establishes a relative singularity threshold based on the overall magnitude of the working matrix:
-
-$$\text{threshold} = \max(\text{tol} \times \max(\lvert M \rvert), 10^{-14}) \quad \text{where } \text{tol} = 10^{-10}$$
-
-If the pivot value $\lvert M_{k,k} \rvert < \text{threshold}$, the system is flagged as singular or ill-conditioned, and execution halts cleanly with an informative explanation.
-
-#### Step 4: Row Normalization & Elementary Transformations
-1. **Normalize Pivot Row:** Divide the entire pivot row by the diagonal entry $M_{k,k}$ so that $M_{k,k} = 1$:
-   $$M_{k, j} \leftarrow \frac{M_{k, j}}{M_{k, k}} \quad \text{for } j = k, \dots, n$$
-
-2. **Eliminate Non-Zero Column Entries:** Zero out all off-diagonal entries in column $k$ across all other rows $i \neq k$:
-   $$M_{i, j} \leftarrow M_{i, j} - (M_{i, k} \times M_{k, j}) \quad \text{for all } i \neq k$$
-
-Upon completing elimination across all $n$ columns, the solution vector is directly read from the final column:
-
-$$x_i = M_{i, n+1} \quad \text{for } i = 1, 2, \dots, n$$
-
----
-
-## 📉 Nonlinear Equations: Root-Finding Methods
-
-To solve $f(x) = 0$, `root_finding.py` provides four methods. Functions are typed as text (e.g. `x^3 - 2*x - 5` or `cos(x) = x`) and read by a safe parser (no `eval`).
-
-### Bracketing Methods (need an interval $[a, b]$ with $f(a)\,f(b) < 0$)
-
-| Method | Update formula | Notes |
-| :--- | :--- | :--- |
-| **Bisection** | $c = \dfrac{a + b}{2}$ | Always converges; error halves each step. |
-| **False Position (Regula Falsi)** | $c = b - \dfrac{f(b)(a - b)}{f(a) - f(b)}$ | Often faster than bisection; one endpoint can get "stuck". |
-
-### Open Methods (need starting guesses, no sign change required)
-
-| Method | Update formula | Notes |
-| :--- | :--- | :--- |
-| **Newton-Raphson** | $x_{n+1} = x_n - \dfrac{f(x_n)}{f'(x_n)}$ | Quadratic convergence; fails if $f'(x_n) \approx 0$. $f'(x)$ may be typed in or approximated by central difference. |
-| **Secant** | $x_{n+1} = x_n - \dfrac{f(x_n)(x_{n-1} - x_n)}{f(x_{n-1}) - f(x_n)}$ | No derivative needed; needs two starting guesses. |
-
-
-### Bairstow's Method (polynomials: all real and complex roots)
-
-Finds a quadratic factor $x^2 + ux + v$ of $f(x) = a_0x^n + a_1x^{n-1} + \dots + a_n$ (with $a_0 = 1$, $a_n \neq 0$), starting from guesses $u^0, v^0$. Its two roots come from the quadratic formula, and the remaining degree $n-2$ polynomial is factored the same way until every root is found.
-
-1. **Synthetic division:** $b_0 = a_0,\; b_1 = a_1 - u b_0,\; b_k = a_k - u b_{k-1} - v b_{k-2}$; the remainder is $(x+u)b_{n-1} + b_n$.
-2. **Partial derivatives:** the same recursion on the b's gives $c_0 = b_0,\; c_1 = b_1 - u c_0,\; c_k = b_k - u c_{k-1} - v c_{k-2}$, where $\partial b_k/\partial u = -c_{k-1}$ and $\partial b_k/\partial v = -c_{k-2}$.
-3. **Taylor series + Cramer's rule:** solve $b_n = c_{n-1}\Delta u + c_{n-2}\Delta v$ and $b_{n-1} = c_{n-2}\Delta u + c_{n-3}\Delta v$ for $\Delta u, \Delta v$.
-4. **Update and repeat** with $u \leftarrow u + \Delta u$, $v \leftarrow v + \Delta v$ until $|b_n| + |b_{n-1}| < \varepsilon$ or $|\Delta u| + |\Delta v| < \varepsilon$.
-5. **Safeguards:** *divergence* if $|\Delta u_{50}| + |\Delta v_{50}| > |\Delta u_1| + |\Delta v_1|$; *slow convergence* after 100 iterations; stop after 200.
-
-The app shows every iteration as a Bairstow table (a's, b's, c's), with the determinants for $\Delta u$ and $\Delta v$ filled in. Type the polynomial as text, e.g. `x^5 - 3*x^4 - 10*x^3 + 10*x^2 + 44*x + 48`; the default guesses $u^0 = v^0 = 1.8$ reproduce the sample problem (factor $x^2 + 2x + 2$, roots $-1 \pm i$).
-
-### Graphs
-
-Every method draws the graph of $f(x)$ as soon as the function is typed. After solving, the iterations (white dots), the root (red diamond) and, for the bracketing methods, the starting interval (shaded band) are added. For Bairstow's method the real roots are marked on the x-axis; complex roots are listed in the results table.
-
-### Typing your function (exponential, trigonometric, logarithmic and more)
-
-Type $f(x)$ like on a calculator, using `x` as the variable. You can type an expression (solved as $f(x) = 0$) or a full equation such as `cos(x) = x`. The app shows a **Reads as** line so you can check how it understood your input, and the **📘 Tutorial** in the Nonlinear Equations tab has a cheat-sheet, common mistakes, and one-click examples.
-
-| What you mean | What to type |
+| Mathematical form | Entry |
 | :--- | :--- |
-| 3x² + 2 | `3x^2 + 2` or `3*x^2 + 2` |
-| eˣ, e⁻ˣ, e²ˣ | `e^x` (or `exp(x)`), `e^(-x)`, `e^(2x)` |
-| 2ˣ | `2^x` |
-| 2 sin x, sin²x, cos 2x | `2sin(x)`, `sin(x)^2`, `cos(2x)` |
-| ln x, log₁₀ x, log₂ x | `ln(x)`, `log10(x)`, `log2(x)` |
-| √x, ³√x, \|x\|, π | `sqrt(x)`, `cbrt(x)`, `abs(x)`, `pi` |
+| $3x^2 + 2$ | `3x^2 + 2` or `3*x^2 + 2` |
+| $e^{x}$, $e^{-x}$, $e^{2x}$ | `e^x` (or `exp(x)`), `e^(-x)`, `e^(2x)` |
+| $2^x$ | `2^x` |
+| $2\sin x$, $\sin^2 x$, $\cos 2x$ | `2sin(x)`, `sin(x)^2`, `cos(2x)` |
+| $\ln x$, $\log_{10} x$, $\log_2 x$ | `ln(x)`, `log10(x)`, `log2(x)` |
+| $\sqrt{x}$, $\sqrt[3]{x}$, $\lvert x \rvert$, $\pi$ | `sqrt(x)`, `cbrt(x)`, `abs(x)`, `pi` |
 
-Available functions: `sin cos tan sec csc cot asin acos atan sinh cosh tanh exp ln log log10 log2 sqrt cbrt abs` (`log` is the natural log). Constants: `pi`, `e`. Always put a function's input in brackets (`sin(x)`, not `sin x`) and use brackets around multi-part exponents (`e^(2x)`, since `e^2x` means e² · x). Trigonometric functions use **radians** by default; switch **Angle mode** to *Degrees* when needed. Bairstow's method accepts polynomials only.
+**Available functions:** `sin`, `cos`, `tan`, `sec`, `csc`, `cot`, `asin`, `acos`, `atan`, `sinh`, `cosh`, `tanh`, `exp`, `ln`, `log`, `log10`, `log2`, `sqrt`, `cbrt`, `abs`. **Constants:** `pi`, `e`.
 
-Standalone test:
+Notes:
 
-```bash
-python root_finding.py
-```
+- The input of a function must be in parentheses: `sin(x)`, not `sin x`.
+- Use parentheses around an exponent with more than one term: `e^(2x)` is $e^{2x}$, whereas `e^2x` means $e^2 \cdot x$.
+- `log(x)` is the natural logarithm, identical to `ln(x)`. Use `log10(x)` for base 10.
+- Trigonometric functions use radians unless the angle mode is set to degrees.
+- Bairstow's method accepts polynomials only.
+- Exponential and trigonometric functions may have several roots. Use the graph and the sign-change scanner to choose an interval or starting guess.
+- Near an asymptote (for example $\tan x$ or $1/x$), a sign change does not indicate a root. The application warns when $f(x^*)$ is not close to zero.
+
+### Choosing a Method
+
+| Situation | Suggested method |
+| :--- | :--- |
+| A sign change is known and reliability is the priority | Bisection or False Position |
+| A good starting guess is available and speed matters | Newton-Raphson |
+| The derivative is difficult to obtain | Secant |
+| All roots of a polynomial are needed, including complex roots | Bairstow's method |
 
 ---
 
-## 🔬 Key Technical Features
+## Installation
 
-| Feature | Description | Engineering Benefit |
-| :--- | :--- | :--- |
-| **Partial Pivoting** | Interchanges rows to place the absolute largest available pivot on the diagonal. | Prevents division by zero and minimizes floating-point precision degradation. |
-| **Scale-Aware Singularity Checking** | Evaluates pivots against a dynamic threshold based on matrix magnitude ($\text{tol} \times \max \lvert M \rvert$). | Prevents false singular rejections on high-magnitude matrices while catching ill-conditioned systems. |
-| **Auditable Transformation Logging** | Records every intermediate matrix state and human-readable row operation formula. | Serves as an educational step-by-step calculation trace for verification. |
-| **Flexible System Sizing** | Dynamically scales from $2 \times 2$ up to $8 \times 8$ linear systems via interactive UI controls. | Accommodates a wide variety of structural and linear algebra problems. |
-
----
-
-## 🚀 Installation & How to Run
-
-Copy and run the code block below in your terminal to set up the repository, virtual environment, dependencies, and launch the application:
+**Requirements:** Python 3.9 or later.
 
 ```bash
-# Clone the repository and enter directory
-git clone <your-repository-url>
-cd <repository-folder-name>
+# Obtain the project files and open a terminal in the project folder
 
-# Create virtual environment
+# Optional: create and activate a virtual environment
 python -m venv venv
+venv\Scripts\activate          # Windows
+source venv/bin/activate       # macOS / Linux
 
-# Activate virtual environment (Linux/macOS)
-source venv/bin/activate
-# Note for Windows users: run "venv\Scripts\activate" instead
-
-# Install required dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# Launch the Streamlit application
+# Start the application
 streamlit run app.py
 ```
 
-The app will open automatically in your browser at `http://localhost:8501`.
+The application opens at `http://localhost:8501`.
 
----
-
-### 🧪 Standalone CLI Testing
-To test the numerical solver directly in the command line without launching the UI:
+If `pip` or `streamlit` is not recognized on Windows, use the Python launcher:
 
 ```bash
-python gauss_jordan.py
+py -m pip install -r requirements.txt
+py -m streamlit run app.py
+```
+
+### Deployment on Streamlit Community Cloud
+
+1. Push all project files, including the `.streamlit` folder, to a GitHub repository.
+2. Create a new app at [share.streamlit.io](https://share.streamlit.io) and set the main file path to `app.py`.
+3. After the first deployment, the application redeploys automatically whenever the repository is updated.
+
+### Using the Solvers Without the Interface
+
+The solver modules can be imported directly:
+
+```python
+from gauss_jordan import solve_gauss_jordan
+import root_finding as rf
+
+# Linear system
+x = solve_gauss_jordan([[2, 1], [1, 3]], [3, 5])
+
+# Nonlinear equation
+f = rf.parse_function("x^3 - 2x - 5")
+result = rf.bisection(f, 2, 3, tol=1e-6)
+print(result["root"], result["iterations"])
+
+# Polynomial roots
+coeffs = rf.parse_polynomial("x^5 - 3x^4 - 10x^3 + 10x^2 + 44x + 48")
+print(rf.bairstow(coeffs, u0=1.8, v0=1.8)["roots"])
+```
+
+Running `python root_finding.py` prints a short comparison of the four root-finding methods.
+
+---
+
+## Project Structure
+
+```text
+.
+|-- app.py                 Streamlit interface
+|-- gauss_jordan.py        Gauss-Jordan solver with step logging
+|-- root_finding.py        Bisection, False Position, Newton-Raphson, Secant,
+|                          Bairstow, and the expression/polynomial parser
+|-- plot_utils.py          Builds the graph of f(x) shown in the interface
+|-- linear_regression.py   Multiple linear regression using the Gauss-Jordan
+|                          solver (for the planned module; not yet in the interface)
+|-- requirements.txt       Python dependencies
+|-- .streamlit/
+|   `-- config.toml        Interface theme
+`-- README.md              Project documentation
 ```
 
 ---
 
-## 📂 Project Structure
+## Verification
 
-```text
-├── app.py           # Interactive Streamlit dashboard for matrix editing & visual solver logs
-├── gauss_jordan.py  # Standalone Gauss-Jordan elimination algorithm with scale-aware pivoting
-├── root_finding.py  # Bisection, False Position, Newton-Raphson, Secant, Bairstow + safe expression/polynomial parser
-├── plot_utils.py    # Builds the f(x) graph (Vega-Lite spec) used by every method
-├── .streamlit/
-│   └── config.toml  # Light theme (colors used by the app)
-├── requirements.txt # Project dependencies (streamlit, numpy, pandas)
-└── README.md        # Technical project documentation
-```
+The following reference results were reproduced by the implementation and can be used to check an installation.
+
+| Problem | Method | Result |
+| :--- | :--- | :--- |
+| $x^3 - 2x - 5 = 0$, tolerance $10^{-6}$ | Bisection on $[2, 3]$ | $x \approx 2.094552$ in 20 iterations |
+| | False Position on $[2, 3]$ | $x \approx 2.094551$ in 13 iterations |
+| | Newton-Raphson from $x_0 = 2$ | $x \approx 2.094551$ in 4 iterations |
+| | Secant from $2$ and $3$ | $x \approx 2.094551$ in 6 iterations |
+| $x^5 - 3x^4 - 10x^3 + 10x^2 + 44x + 48 = 0$ | Bairstow, $u^0 = v^0 = 1.8$ | Factor $x^2 + 2x + 2$, giving $x = -1 \pm i$; remaining factor $x^3 - 5x^2 - 2x + 24$ with roots $-2,\ 3,\ 4$ |
+| Default $4 \times 4$ system in the interface | Gauss-Jordan | $x \approx (2.3791,\ 3.8303,\ 3.3863,\ 4.6570)$ |
+
+The first Bairstow iteration of the sample problem gives $\Delta u \approx 0.204$ and $\Delta v \approx 0.153$, matching a hand calculation. Roots obtained for random polynomials of degree 3 to 8 were compared with NumPy's root finder and agreed.
+
+---
+
+## Limitations
+
+- The linear solver handles square systems of size $2 \times 2$ to $8 \times 8$ with a unique solution.
+- Root-finding methods find one root per run (Bairstow's method finds all roots of a polynomial). Several roots of a general function require separate runs with different intervals or starting values.
+- Newton-Raphson and Secant may diverge or converge to an unintended root if the starting values are poor.
+- Bairstow's method may fail for unfavorable starting values $u^0, v^0$. In the "all roots" mode, the application retries with alternative starting values before reporting failure.
+- Results are limited by double-precision floating-point arithmetic.
+
+---
+
+## Roadmap
+
+A machine learning module is planned for the next update. It will estimate the 28-day compressive strength of concrete from mix proportions (for example cement content, water-cement ratio, and curing age) using multiple linear regression. The model will be fitted by solving the normal equations $(X^T X)\beta = X^T y$ with the Gauss-Jordan solver in this project.
+
+---
+
+## License
+
+This project is intended for academic use.
