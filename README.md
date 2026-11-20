@@ -9,7 +9,7 @@ Faculty of Computing, Engineering and Technology, Department of Civil Engineerin
 [![Python](https://img.shields.io/badge/Language-Python%203.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-Academic%20Use-blue?style=for-the-badge)](#)
 
-**Live application:** [mlgaussjordan.streamlit.app](https://mlgaussjordan.streamlit.app)
+**Live application:** [mlgaussjordan.streamlit.app](https://numericalsolver.streamlit.app)
 
 ---
 
